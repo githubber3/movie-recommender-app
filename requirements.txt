@@ -1,5 +1,6 @@
 streamlit
 pandas
+scikit-learn==1.7.1
 scikit-surprise
 altair==5.5.0
 attrs==25.3.0
