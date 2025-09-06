@@ -1,5 +1,7 @@
 pandas
 streamlit
-Cython<3.0
+--no-use-pep517
 scikit-surprise
+# Cython<3.0
+# scikit-surprise
 # git+https://github.com/NicolasHug/surprise.git
