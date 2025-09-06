@@ -1,4 +1,6 @@
 pandas
+--use-pep517
+scikit-surprise
 streamlit
-scikit-surprise==1.1.3
+# scikit-surprise==1.1.3
 # git+https://github.com/NicolasHug/surprise.git
