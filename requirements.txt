@@ -1,5 +1,4 @@
 pandas
---use-pep517
 scikit-surprise
 streamlit
 # scikit-surprise==1.1.3
