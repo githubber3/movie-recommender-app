@@ -1,3 +1,5 @@
 pandas
 streamlit
-git+https://github.com/NicolasHug/surprise.git
+Cython<3.0
+scikit-surprise
+# git+https://github.com/NicolasHug/surprise.git
