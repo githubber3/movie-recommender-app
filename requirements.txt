@@ -18,8 +18,6 @@ narwhals==2.3.0
 numpy==2.3.2
 packaging==25.0
 pandas
-# pandas==2.3.2
-# pandas==2.2.0
 streamlit==1.36.0
 # Add other packages your recommender might use, e.g.:
 scikit-learn==1.5.0
