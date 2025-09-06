@@ -1,4 +1,4 @@
 streamlit
 pandas
---no-binary scikit-surprise
 scikit-surprise
+numpy<2.0
