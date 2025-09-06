@@ -1,3 +1,4 @@
 streamlit
 pandas
 scikit-surprise
+--no-binary :all: scikit-surprise
