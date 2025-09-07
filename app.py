@@ -12,8 +12,14 @@ st.set_page_config(layout="wide")
 # Pass a string argument to st.title()
 st.title("Movie Recommender App")
 
+@st.cache_data
+def load_movie_data():
+    """Load movie titles and cache the result"""
+    return pd.read_csv('ml-1m/movies.csv')
+
 # Load the movie titles from the CSV file
-movies_df = pd.read_csv('ml-1m/movies.csv')
+# movies_df = pd.read_csv('ml-1m/movies.csv')
+movies_df = load_movie_data()
 movie_options = sorted(movies_df['Title'].tolist())
 
 # Create two columns with a specified width ratio
