@@ -2,19 +2,38 @@ import pandas as pd
 from surprise import Dataset, SVD, Reader
 from surprise.model_selection import train_test_split
 from collections import defaultdict
+import streamlit as st
 
 # --- Data loading ---
-movies_df = pd.read_csv('ml-1m/movies.csv')
-ratings_df = pd.read_csv('ml-1m/ratings.csv')
+@st.cache_resource
+def load_and_train_model():
+    """Load the dataset and train the SVD model, caching the model itself"""
+    data = Dataset.load_builtin('ml-100k')
+    trainset, _ = train_test_split(data, test_size=0.2)
+    algo = SVD()
+    algo.fit(trainset)
+    return algo
+
+@st.cache_data
+def load_movie_data():
+    """Load movie titles and cache the result."""
+    return pd.read_csv('ml-1m/movies.csv')
+
+movies_df = load_movie_data()
+
+@st.cache_data
+def load_rating_data():
+    return pd.read_csv('ml-1m/ratings.csv')
+
+ratings_df = load_rating_data()
 
 # --- Train the SVD model (You only need to do this once) ---
 # Surprise Reader object expects columns to be in this order: ['user', 'item', 'rating']
-reader = Reader(rating_scale=(1, 5))
-data = Dataset.load_from_df(ratings_df[['UserID', 'MovieID', 'Rating']], reader)
-trainset, _ = train_test_split(data, test_size=0.01) # Use a small test size for simplicity
-
-algo = SVD()
-algo.fit(trainset)
+# reader = Reader(rating_scale=(1, 5))
+# data = Dataset.load_from_df(ratings_df[['UserID', 'MovieID', 'Rating']], reader)
+# trainset, _ = train_test_split(data, test_size=0.01) # Use a small test size for simplicity
+# algo = SVD()
+# algo.fit(trainset)
 
 # --- Recommendation Function ---
 def get_movie_recommendations(movie_title, n=5):
