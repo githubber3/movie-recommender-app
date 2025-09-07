@@ -22,7 +22,7 @@ def get_movie_options():
 movie_options = get_movie_options()
 
 # --- Layout and widgets ---
-col1, col2 = st.columns([2, 1])
+col1, col2 = st.columns()
 
 with col1:
     st.header("Select a Movie")
