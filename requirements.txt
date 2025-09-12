@@ -3,4 +3,4 @@ pandas
 scikit-surprise
 numpy<2.0
 requests
-nginx
+gdown
