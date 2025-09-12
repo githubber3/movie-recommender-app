@@ -4,7 +4,34 @@ import streamlit as st
 import requests
 import os
 import re
+import zipfile
+import requests
 
+
+def download_and_extract_ml_20m():
+    folder_name = "ml-20m"
+    zip_file = "ml-20m.zip"
+
+    if not os.path.exists(folder_name):
+        # Replace with your actual Google Drive file ID
+        file_id = "1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
+        url = f"https://drive.google.com/uc?export=download&id={file_id}"
+
+        print("Downloading ml-20m.zip from Google Drive...")
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            with open(zip_file, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        print("Extracting ml-20m.zip...")
+        with zipfile.ZipFile(zip_file, "r") as zip_ref:
+            zip_ref.extractall(".")
+
+        os.remove(zip_file)
+        print("ml-20m dataset is ready.")
+
+download_and_extract_ml_20m()
 
 # --- Caching Functions for ml-20m Data ---
 @st.cache_data(show_spinner=False)
