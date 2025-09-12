@@ -13,8 +13,9 @@ def download_and_extract_ml_20m():
     data_folder = "ml-20m"    
 
     if not os.path.exists(data_folder):
-        file_id = "1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
-        url = f"https://drive.google.com/file/d/{file_id}/view?usp=drive_link"
+        # file_id = "1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
+        # url = f"https://drive.google.com/file/d/{file_id}/view?usp=drive_link"
+        url = "https://drive.google.com/uc?id=1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
 
         print("Downloading ml-20m.zip...")
         gdown.download(url, zip_file, quiet=False)
