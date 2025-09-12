@@ -208,5 +208,8 @@ __marimo__/
 
 # Secrets
 secret.toml
+
+
+# Ignore MovieLens dataset files
 ml-20m/
 ml-20m.zip
