@@ -157,7 +157,8 @@ def get_top_rated_movies(n=5):
     return recommendations
 
 def get_movie_recommendations(movie_title=None, n=5, method="Personalized"):
-    ensure_data_ready()
+    #ensure_data_ready()
+    ensure_data_available() 
     ratings_df = load_rating_data()
     merged_movies_df = load_merged_movies_data()
 
