@@ -36,11 +36,9 @@ def download_and_extract_ml_20m():
 
 
 
-def ensure_data_ready():
-    if not os.path.exists("ml-20m"):
-        download_and_extract_ml_20m()
-
-
+@st.cache_data(show_spinner="Downloading dataset...")
+def ensure_data_available():
+    download_and_extract_ml_20m()
 
 # --- Caching Functions for ml-20m Data ---
 @st.cache_data(show_spinner=False)

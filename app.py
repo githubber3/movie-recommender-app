@@ -1,9 +1,17 @@
 import streamlit as st
 from recommender import get_movie_recommendations, load_movie_data
 
+from recommender import ensure_data_available
+ensure_data_available()  # Ensures dataset is downloaded before anything else
+
+
 # --- App configuration ---
 st.set_page_config(layout="wide")
 st.title("Movie Recommender App")
+
+# Ensure dataset is downloaded
+# from recommender import ensure_data_available
+# ensure_data_available()
 
 # --- Session state management ---
 if 'recommendations' not in st.session_state:
