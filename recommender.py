@@ -10,35 +10,30 @@ import gdown
 
 def download_and_extract_ml_20m():
     zip_file = "ml-20m.zip"
-    data_folder = "ml-20m"    
+    data_folder = "ml-20m"
 
+    # Avoid downloading again if the key file exists
     if os.path.exists(os.path.join(data_folder, "movies.csv")):
-        return  # Already extracted
+        return
 
-        # if not os.path.exists(data_folder):
-        
-        # file_id = "1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
-        # url = f"https://drive.google.com/file/d/{file_id}/view?usp=drive_link"
-        url = "https://drive.google.com/uc?id=1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
+    url = "https://drive.google.com/uc?id=1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
 
-        try:
-            st.info("Downloading ml-20m.zip...")
-            gdown.download(url, zip_file, quiet=False)
+    try:
+        st.info("Downloading dataset (ml-20m.zip)...")
+        gdown.download(url, zip_file, quiet=False)
 
-            if not os.path.exists(zip_file):
-                raise FileNotFoundError("Download failed: ml-20m.zip not found.")
-       
-            with zipfile.ZipFile(zip_file, "r") as zip_ref:
-                zip_ref.extractall(".")
+        if not os.path.exists(zip_file):
+            raise FileNotFoundError("Download failed: ml-20m.zip not found.")
 
-            os.remove(zip_file)  
+        with zipfile.ZipFile(zip_file, "r") as zip_ref:
+            zip_ref.extractall(".")
 
-        except Exception as e:
-            st.error(f"Failed to download or extract dataset: {e}")
-            raise RuntimeError("Downloaded file is not a valid ZIP archive")  
+        os.remove(zip_file)
 
-        if os.path.exists(zip_file):
-            os.remove(zip_file)    
+    except Exception as e:
+        st.error(f"Dataset download failed: {e}")
+        raise e  # <-- corrected here
+
 
 
 def ensure_data_ready():
@@ -51,21 +46,16 @@ def ensure_data_ready():
 @st.cache_data(show_spinner=False)
 def load_movie_data():
     download_and_extract_ml_20m()
-    """Load ml-20m movies.csv into a Pandas DataFrame."""
-    movies_df = pd.read_csv(os.path.join("ml-20m", "movies.csv"))
-    return movies_df
+    return pd.read_csv(os.path.join("ml-20m", "movies.csv"))
 
 @st.cache_data(show_spinner=False)
 def load_rating_data():
     download_and_extract_ml_20m()
-    """Load ml-20m ratings.csv into a Pandas DataFrame."""
-    ratings_df = pd.read_csv(os.path.join("ml-20m", "ratings.csv"))
-    return ratings_df
+    return pd.read_csv(os.path.join("ml-20m", "ratings.csv"))
 
 @st.cache_data(show_spinner=False)
 def load_links_data():
     download_and_extract_ml_20m()
-    """Load ml-20m links.csv into a Pandas DataFrame."""
     links_df = pd.read_csv(os.path.join("ml-20m", "links.csv"))
     links_df['tmdbId'] = links_df['tmdbId'].fillna(0).astype(int)
     return links_df
