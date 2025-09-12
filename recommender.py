@@ -5,31 +5,32 @@ import requests
 import os
 import re
 import zipfile
-import requests
+import gdown
 
 
 def download_and_extract_ml_20m():
-    folder_name = "ml-20m"
     zip_file = "ml-20m.zip"
+    data_folder = "ml-20m"    
 
-    if not os.path.exists(folder_name):
-        # Replace with your actual Google Drive file ID
+    if not os.path.exists(data_folder):
         file_id = "1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
-        url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        url = f"https://drive.google.com/file/d/{file_id}/view?usp=drive_link"
 
-        print("Downloading ml-20m.zip from Google Drive...")
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open(zip_file, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+        print("Downloading ml-20m.zip...")
+        gdown.download(url, zip_file, quiet=False)
 
-        print("Extracting ml-20m.zip...")
-        with zipfile.ZipFile(zip_file, "r") as zip_ref:
-            zip_ref.extractall(".")
+        if not os.path.exists(zip_file):
+            raise FileNotFoundError("Download failed: ml-20m.zip not found.")
+        
+        try:
+            with zipfile.ZipFile(zip_file, "r") as zip_ref:
+                zip_ref.extractall(".")
+        except zipfile.BadZipFile:
+            raise RuntimeError("Downloaded file is not a valid ZIP archive")  
 
-        os.remove(zip_file)
-        print("ml-20m dataset is ready.")
+        if os.path.exists(zip_file):
+            os.remove(zip_file)    
+
 
 download_and_extract_ml_20m()
 
