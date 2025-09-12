@@ -13,6 +13,7 @@ def download_and_extract_ml_20m():
     data_folder = "ml-20m"    
 
     if not os.path.exists(data_folder):
+        
         # file_id = "1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
         # url = f"https://drive.google.com/file/d/{file_id}/view?usp=drive_link"
         url = "https://drive.google.com/uc?id=1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
@@ -33,7 +34,11 @@ def download_and_extract_ml_20m():
             os.remove(zip_file)    
 
 
-download_and_extract_ml_20m()
+def ensure_data_ready():
+    if not os.path.exists("ml-20m"):
+        download_and_extract_ml_20m()
+
+
 
 # --- Caching Functions for ml-20m Data ---
 @st.cache_data(show_spinner=False)
@@ -66,12 +71,6 @@ def load_merged_movies_data():
     merged_df = pd.merge(movies_df, links_df, on='movieId', how='left')
     return merged_df
 
-
-# --- TMDB API Interaction ---
-
-# In recommender.py
-
-# ... (other code) ...
 
 # --- TMDB API Interaction ---
 @st.cache_data(ttl=3600)
@@ -109,6 +108,10 @@ def get_movie_details(tmdb_id):
 def load_and_train_svd_model():
     """Load data and train the SVD model, caching the model itself."""
     ratings_df = load_rating_data()
+
+    # 💡 Use a sample of users or rows
+    # Use only 100,000 ratings (5%) instead of 20M
+    ratings_sample = ratings_df.sample(n=100_000, random_state=42)
     
     reader = Reader(rating_scale=(1, 5))
     data = Dataset.load_from_df(ratings_df[['userId', 'movieId', 'rating']], reader)
@@ -156,6 +159,7 @@ def get_top_rated_movies(n=5):
     return recommendations
 
 def get_movie_recommendations(movie_title=None, n=5, method="Personalized"):
+    ensure_data_ready()
     ratings_df = load_rating_data()
     merged_movies_df = load_merged_movies_data()
 
@@ -175,14 +179,18 @@ def get_movie_recommendations(movie_title=None, n=5, method="Personalized"):
     else:
         # Personalized (SVD-based) recommendation
         movies_df = merged_movies_df[['movieId', 'title']].drop_duplicates()
+
         movie_row = movies_df[movies_df['title'] == movie_title]
         if movie_row.empty:
-            return f"Movie '{movie_title}' not found in the dataset."
+            st.warning(f"Movie '{movie_title}' not found.")
+            return []
 
         movie_id = movie_row['movieId'].iloc[0]
         relevant_users = ratings_df[ratings_df['movieId'] == movie_id]['userId'].tolist()
         if not relevant_users:
-            return f"No ratings found for '{movie_title}'. Unable to generate recommendations."
+            st.warning(f"No ratings found for '{movie_title}'.")
+            return []
+
 
         user_id = relevant_users[0]
         algo, trainset = load_and_train_svd_model()

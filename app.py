@@ -20,12 +20,6 @@ def get_movie_options():
 
 movie_options = get_movie_options()
 
-# # --- Recommendation Method Toggle ---
-# rec_method = st.radio(
-#     "Recommendation Method:",
-#     ["Personalized", "Top Rated"],
-#     horizontal=True
-# )
 
 def on_method_change():
     method = st.session_state.get("rec_method", "Personalized")
