@@ -7,75 +7,62 @@ import re
 import zipfile
 import gdown
 
+# --- Ensure dataset is available ---
+@st.cache_data(show_spinner="Downloading dataset...")
+def ensure_data_available():
+    download_and_extract_ml_20m()
 
 def download_and_extract_ml_20m():
     zip_file = "ml-20m.zip"
     data_folder = "ml-20m"
 
-    # Avoid downloading again if the key file exists
-    if os.path.exists(os.path.join(data_folder, "movies.csv")):
-        return
+    if not os.path.exists(data_folder):
+        url = "https://drive.google.com/uc?id=1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
 
-    url = "https://drive.google.com/uc?id=1yJXGy0oHO4FboOj5j105QSxh9XrrQ1Hm"
-
-    try:
-        st.info("Downloading dataset (ml-20m.zip)...")
+        print("Downloading ml-20m.zip...")
         gdown.download(url, zip_file, quiet=False)
 
         if not os.path.exists(zip_file):
             raise FileNotFoundError("Download failed: ml-20m.zip not found.")
 
-        with zipfile.ZipFile(zip_file, "r") as zip_ref:
-            zip_ref.extractall(".")
+        try:
+            with zipfile.ZipFile(zip_file, "r") as zip_ref:
+                zip_ref.extractall(".")
+        except zipfile.BadZipFile:
+            raise RuntimeError("Downloaded file is not a valid ZIP archive")
 
-        os.remove(zip_file)
-
-    except Exception as e:
-        st.error(f"Dataset download failed: {e}")
-        raise e  # <-- corrected here
-
-
-
-@st.cache_data(show_spinner="Downloading dataset...")
-def ensure_data_available():
-    download_and_extract_ml_20m()
+        if os.path.exists(zip_file):
+            os.remove(zip_file)
 
 # --- Caching Functions for ml-20m Data ---
 @st.cache_data(show_spinner=False)
 def load_movie_data():
-    download_and_extract_ml_20m()
-    return pd.read_csv(os.path.join("ml-20m", "movies.csv"))
+    movies_df = pd.read_csv(os.path.join("ml-20m", "movies.csv"))
+    return movies_df
 
 @st.cache_data(show_spinner=False)
 def load_rating_data():
-    download_and_extract_ml_20m()
-    return pd.read_csv(os.path.join("ml-20m", "ratings.csv"))
+    ratings_df = pd.read_csv(os.path.join("ml-20m", "ratings.csv"))
+    return ratings_df
 
 @st.cache_data(show_spinner=False)
 def load_links_data():
-    download_and_extract_ml_20m()
     links_df = pd.read_csv(os.path.join("ml-20m", "links.csv"))
     links_df['tmdbId'] = links_df['tmdbId'].fillna(0).astype(int)
     return links_df
 
-
 @st.cache_data(show_spinner=False)
 def load_merged_movies_data():
-    """
-    Load and merge movies.csv with links.csv into one DataFrame.
-    """
     movies_df = load_movie_data()
     links_df = load_links_data()
     merged_df = pd.merge(movies_df, links_df, on='movieId', how='left')
     return merged_df
 
-
 # --- TMDB API Interaction ---
 @st.cache_data(ttl=3600)
 def get_movie_details(tmdb_id):
-    """Fetches movie details (poster, overview) from TMDB API using tmdbId."""
     if not tmdb_id or tmdb_id == 0:
-        return None  # Return None instead of empty details
+        return None
 
     tmdb_api_key = st.secrets.get("tmdb_api_key")
     if not tmdb_api_key:
@@ -88,56 +75,41 @@ def get_movie_details(tmdb_id):
     try:
         response = requests.get(base_url, params=params)
         if response.status_code == 404:
-            # Silent fail for missing movies
             return None
         response.raise_for_status()
         data = response.json()
         return {
             "poster_path": data.get("poster_path"),
-            "overview": data.get("overview", "Description not available.")
+            "overview": data.get("overview", "Description not available."),
+            "release_date": data.get("release_date")
         }
     except requests.exceptions.RequestException as e:
         st.warning(f"TMDb fetch failed for tmdbId {tmdb_id}: {e}")
         return None
 
-
-
 @st.cache_resource(show_spinner="Training SVD model...")
 def load_and_train_svd_model():
-    """Load data and train the SVD model, caching the model itself."""
     ratings_df = load_rating_data()
-
-    # 💡 Use a sample of users or rows
-    # Use only 100,000 ratings (5%) instead of 20M
-    ratings_sample = ratings_df.sample(n=100_000, random_state=42)
-    
     reader = Reader(rating_scale=(1, 5))
     data = Dataset.load_from_df(ratings_df[['userId', 'movieId', 'rating']], reader)
     trainset = data.build_full_trainset()
-    
     algo = SVD()
     algo.fit(trainset)
-    
     return algo, trainset
 
 # --- Recommendation Function ---
-
 def extract_year_from_title(title):
     match = re.search(r'\((\d{4})\)', title)
     return match.group(1) if match else "Unknown"
 
 @st.cache_data(show_spinner=False)
 def get_top_rated_movies(n=5):
-    """Returns the top-rated movies by average rating."""
     ratings_df = load_rating_data()
     movies_df = load_merged_movies_data()
 
     avg_ratings = ratings_df.groupby('movieId')['rating'].agg(['mean', 'count']).reset_index()
     avg_ratings.columns = ['movieId', 'avg_rating', 'rating_count']
-
-    # Filter out movies with very few ratings (e.g., < 50)
     filtered = avg_ratings[avg_ratings['rating_count'] >= 50]
-
     merged = pd.merge(filtered, movies_df, on='movieId', how='inner').sort_values(by='avg_rating', ascending=False)
 
     recommendations = []
@@ -157,77 +129,65 @@ def get_top_rated_movies(n=5):
     return recommendations
 
 def get_movie_recommendations(movie_title=None, n=5, method="Personalized"):
-    #ensure_data_ready()
-    ensure_data_available() 
+    ensure_data_available()  # ✅ Ensures data is downloaded (cached)
+
     ratings_df = load_rating_data()
     merged_movies_df = load_merged_movies_data()
 
-    # Compute average ratings and count
-    average_ratings = ratings_df.groupby('movieId')['rating'].agg(['mean', 'count']).reset_index()
-    average_ratings.columns = ['movieId', 'avg_rating', 'rating_count']
-
-    # Merge ratings with metadata
-    merged = pd.merge(merged_movies_df, average_ratings, on='movieId', how='left')
-
     if method == "Top Rated":
-        # Optional filter: only include movies with 50+ ratings
-        if method == "Top Rated":
-            return get_top_rated_movies(n)
+        return get_top_rated_movies(n)
 
+    # Personalized (SVD-based) recommendation
+    movies_df = merged_movies_df[['movieId', 'title']].drop_duplicates()
+    movie_row = movies_df[movies_df['title'] == movie_title]
 
-    else:
-        # Personalized (SVD-based) recommendation
-        movies_df = merged_movies_df[['movieId', 'title']].drop_duplicates()
+    if movie_row.empty:
+        st.warning(f"Movie '{movie_title}' not found.")
+        return []
 
-        movie_row = movies_df[movies_df['title'] == movie_title]
-        if movie_row.empty:
-            st.warning(f"Movie '{movie_title}' not found.")
-            return []
+    movie_id = movie_row['movieId'].iloc[0]
+    relevant_users = ratings_df[ratings_df['movieId'] == movie_id]['userId'].tolist()
 
-        movie_id = movie_row['movieId'].iloc[0]
-        relevant_users = ratings_df[ratings_df['movieId'] == movie_id]['userId'].tolist()
-        if not relevant_users:
-            st.warning(f"No ratings found for '{movie_title}'.")
-            return []
+    if not relevant_users:
+        st.warning(f"No ratings found for '{movie_title}'.")
+        return []
 
+    user_id = relevant_users[0]
+    algo, trainset = load_and_train_svd_model()
+    rated_movie_ids = ratings_df[ratings_df['userId'] == user_id]['movieId'].tolist()
+    predictions = [
+        algo.predict(user_id, item_id)
+        for item_id in movies_df['movieId']
+        if item_id not in rated_movie_ids
+    ]
+    predictions.sort(key=lambda x: x.est, reverse=True)
 
-        user_id = relevant_users[0]
-        algo, trainset = load_and_train_svd_model()
-        rated_movie_ids = ratings_df[ratings_df['userId'] == user_id]['movieId'].tolist()
-        predictions = [
-            algo.predict(user_id, item_id)
-            for item_id in movies_df['movieId']
-            if item_id not in rated_movie_ids
-        ]
-        predictions.sort(key=lambda x: x.est, reverse=True)
+    recommended_movies_with_details = []
+    count = 0
+    for pred in predictions:
+        if count >= n:
+            break
 
-        recommended_movies_with_details = []
-        count = 0
-        for pred in predictions:
-            if count >= n:
-                break
+        movie_info = merged_movies_df[merged_movies_df['movieId'] == pred.iid]
+        if movie_info.empty:
+            continue
 
-            movie_info = merged[merged['movieId'] == pred.iid]
+        movie_info = movie_info.iloc[0]
+        tmdb_id = movie_info['tmdbId']
+        details = get_movie_details(tmdb_id)
+        if details is None:
+            continue
 
-            if movie_info.empty:
-                continue
-            movie_info = movie_info.iloc[0]
+        release_year = details.get('release_date') or extract_year_from_title(movie_info['title'])
 
-            tmdb_id = movie_info['tmdbId']
-            details = get_movie_details(tmdb_id)
-            if details is None:
-                continue
+        recommended_movies_with_details.append({
+            "title": movie_info['title'],
+            "poster_path": details.get("poster_path"),
+            "overview": details.get("overview"),
+            "vote_average": round(movie_info['avg_rating'], 1) if pd.notna(movie_info['avg_rating']) else None,
+            "release_date": release_year
+        })
 
-            release_year = details.get('release_date') or extract_year_from_title(movie_info['title'])
+        count += 1
 
-            recommended_movies_with_details.append({
-                "title": movie_info['title'],
-                "poster_path": details.get("poster_path"),
-                "overview": details.get("overview"),
-                "vote_average": round(movie_info['avg_rating'], 1) if pd.notna(movie_info['avg_rating']) else None,
-                "release_date": release_year
-            })
-
-            count += 1
-
-        return recommended_movies_with_details
+    return recommended_movies_with_details
