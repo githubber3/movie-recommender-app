@@ -85,22 +85,22 @@ def get_movie_details(tmdb_id):
 
 
 # --- Train SVD (on subsample) ---
-@st.cache_resource(show_spinner="Training recommendation model...")
+@st.cache_resource(show_spinner="Training SVD model...")
 def load_and_train_svd_model():
     ratings_df = load_rating_data()
 
-    # Subsample to prevent Cloud crash
-    if len(ratings_df) > 100000:
-        ratings_df = ratings_df.sample(100000, random_state=42)
+    # 🔁 Try with 100_000 first, then scale up gradually
+    sample_size = 100_000
+    if len(ratings_df) > sample_size:
+        ratings_df = ratings_df.sample(sample_size, random_state=42)
 
     reader = Reader(rating_scale=(1, 5))
     data = Dataset.load_from_df(ratings_df[['userId', 'movieId', 'rating']], reader)
     trainset = data.build_full_trainset()
-
     algo = SVD()
     algo.fit(trainset)
-
     return algo, trainset
+
 
 
 # --- Recommendation Function ---
